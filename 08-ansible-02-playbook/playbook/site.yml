@@ -1,0 +1,59 @@
+---
+- name: Install Clickhouse
+  hosts: clickhouse
+  handlers:
+    - name: Start clickhouse service
+      become: true
+      ansible.builtin.service:
+        name: clickhouse-server
+        state: restarted
+  tasks:
+    - block:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/rpm/stable/{{ item }}-{{ clickhouse_version }}.noarch.deb"
+            dest: "./{{ item }}-{{ clickhouse_version }}.deb"
+          with_items: "{{ clickhouse_packages }}"
+      rescue:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/rpm/stable/clickhouse-common-static-{{ clickhouse_version }}.x86_64.deb"
+            dest: "./clickhouse-common-static-{{ clickhouse_version }}.deb"
+    - name: Install clickhouse packages
+      become: true
+      ansible.builtin.apt:
+        name:
+          - clickhouse-common-static-{{ clickhouse_version }}.deb
+          - clickhouse-client-{{ clickhouse_version }}.deb
+          - clickhouse-server-{{ clickhouse_version }}.deb
+      notify: Start clickhouse service
+    - name: Flush handlers
+      meta: flush_handlers
+    - name: Create database
+      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
+      register: create_db
+      failed_when: create_db.rc != 0 and create_db.rc !=82
+      changed_when: create_db.rc == 0
+
+- name: Install Vektor
+  hosts: vektor
+  handlers:
+    - name: Start vector service
+      become: true
+      ansible.builtin.service:
+        name: vector
+        state: restarted
+  tasks:
+    - name: Get vektor distrib
+      ansible.builtin.get_url:
+        url: "https://packages.clickhouse.com/rpm/stable/{{ item }}-{{ clickhouse_version }}.noarch.deb"
+        dest: "./{{ item }}-{{ clickhouse_version }}.deb"
+        loop: "{{ vector_packages }}"
+      tags: vektor
+    - name: Install vektor packages
+      become: true
+      ansible.builtin.apt:
+        name: "{{ item }}-{{ vector_version }}.deb"
+      loop: "{{ vector_packages }}"
+      notify: Start vector service
+      tags: vektor
