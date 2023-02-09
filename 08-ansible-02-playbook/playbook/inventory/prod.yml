@@ -5,7 +5,6 @@ clickhouse:
       ansible_host: 192.168.6.26
       ansible_connection: ssh
       ansible_user: sa
-      ansible_ssh_pass: Rooqdv74hj
 
 vektor:
   hosts:
@@ -13,4 +12,3 @@ vektor:
       ansible_host: 192.168.6.26
       ansible_connection: ssh
       ansible_user: sa
-      ansible_ssh_pass: Rooqdv74hj
